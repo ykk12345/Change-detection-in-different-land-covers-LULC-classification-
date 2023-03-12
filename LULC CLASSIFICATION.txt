@@ -1,0 +1,63 @@
+// LULC classification is divided into two parts
+// Supervised and unsupervised
+//we are here doing the supervised classification
+//steps
+/*
+1.Choosing Area of interest
+2.Choosing and filtering the image
+3.Adding layer to display
+4.Training points collection
+5.Merging the training  points
+6.Make a training dataset by sampling regions
+7.Create the classifier
+8.Classify the image
+9.Adding layer to display
+10.Print the confusion matrix for accuracy assessment
+*/
+
+Map.setCenter(77.28,28.41,15);
+
+//2.Choosing and filtering the image
+var selection = L8.filterBounds(roi)
+.filterDate("2015-01-01","2015-05-30")
+.filterMetadata("CLOUD_COVER","less_than",1)
+.mean()
+.clip(roi);
+
+// 3.Adding layer to display
+Map.addLayer(selection,{bands:["B4","B3","B2"]});
+
+//4.collect the training points
+// done through marker and can be done through polygon and rectangle geommetery tool
+
+// 5. Merging of the training points - print the training data
+
+var training_points = 
+water.merge(veg).merge(non_veg);
+
+//print(training_points);
+
+// 6.Make a training dataset by sampling regions
+
+var training_data = selection.sampleRegions({  // covert each pixel of an image at a given scale that intersects one or more regions to a feature ,returning them as a FeatureCollection
+  collection:training_points,
+  properties:['landcover'],
+  scale: 30})
+//print(training_data);
+  
+// 7.Create the classifier
+
+var classifier = ee.Classifier.smileCart()
+var classifier = classifier.train({features: training_data,
+classProperty:"landcover",
+inputProperties:["B1","B2","B3","B4","B5","B6","B7","B10","B11"]});
+
+//8. Create the classified image
+
+var classified_image = selection.classify(classifier);
+
+//9.Adding layer to display
+Map.addLayer(classified_image,{min:0,max:2, palette:['blue','green','red']},'classified image');
+
+// 10.Print the confusion matrix for accuracy assessment 
+print(classifier.confusionMatrix());
